@@ -91,14 +91,14 @@
         
         <button id="set-current-date" onclick="setPlanetsToCurrentPositions()" 
                 class="px-3 py-2 md:px-4 md:py-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm whitespace-nowrap">
-            Aktualna data
+            Ustaw Dziś
         </button>
 
         <!-- Sekcja przycisków prędkości jest zawsze w poziomie, ale jest elementem flex wewnątrz panelu -->
         <div class="flex space-x-2 justify-center">
-            <button id="speed-x1" onclick="setSpeedMultiplier(1)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">10min/sek</button>
-            <button id="speed-x10" onclick="setSpeedMultiplier(10)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">90min/sek</button>
-            <button id="speed-x100" onclick="setSpeedMultiplier(100)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">12h/sek</button>
+            <button id="speed-x1" onclick="setSpeedMultiplier(1)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x1</button>
+            <button id="speed-x10" onclick="setSpeedMultiplier(10)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x10</button>
+            <button id="speed-x100" onclick="setSpeedMultiplier(100)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x100</button>
         </div>
     </div>
 
@@ -178,40 +178,70 @@
                 color: 0x777777,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/mercurymap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Mercury_in_true_color.jpg', 
-                lightTravelTime: "3 min 17 sek",
-                details: { Typ: "Planeta skalista", Masa: `0.055 M<sub>&#8853;</sub>`, Okres_orbitalny: "88 dni", Średnia_odległość: `${toMlnKm(0.387)} mln km`, Ciekawostka: "Najmniejsza planeta Układu." } 
+                details: { 
+                    Typ: "Planeta skalista", 
+                    Masa: `0.055 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "88 dni", 
+                    Średnia_odległość: `${toMlnKm(0.387)} mln km`, 
+                    Czas_podróży_światła: "3 min 17 sek", /* DODANO */
+                    Ciekawostka: "Najmniejsza planeta Układu." 
+                } 
             },
             { 
                 name: "Wenus", size: 1.5, distance: 30, orbitPeriod: 225, dayLength: 243.0, epochOffsetAngle: 4.8, 
                 color: 0xFFEBCD,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/venusmap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/PIA23791-Venus-RealAndEnhancedContrastViews-20200608_%28cropped%29.jpg', 
-                lightTravelTime: "6 min 0 sek",
-                details: { Typ: "Planeta skalista", Masa: `0.815 M<sub>&#8853;</sub>`, Okres_orbitalny: "225 dni", Średnia_odległość: `${toMlnKm(0.723)} mln km`, Ciekawostka: `Najgorętsza planeta (471 &deg;C).` } 
+                details: { 
+                    Typ: "Planeta skalista", 
+                    Masa: `0.815 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "225 dni", 
+                    Średnia_odległość: `${toMlnKm(0.723)} mln km`, 
+                    Czas_podróży_światła: "6 min 0 sek", /* DODANO */
+                    Ciekawostka: `Najgorętsza planeta (471 &deg;C).` 
+                } 
             },
             { 
                 name: "Ziemia", size: 1.8, distance: 40, orbitPeriod: 365.25, dayLength: 1.0, epochOffsetAngle: 0, 
                 mapUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/The_Blue_Marble_%28remastered%29.jpg',
                 color: 0x0077ff, 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg', 
-                lightTravelTime: "8 min 20 sek",
-                details: { Typ: "Planeta skalista", Masa: `1 M<sub>&#8853;</sub>`, Okres_orbitalny: "365 dni", Średnia_odległość: `${toMlnKm(1.000)} mln km`, Ciekawostka: "Jedyna planeta z życiem." } 
+                details: { 
+                    Typ: "Planeta skalista", 
+                    Masa: `1 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "365 dni", 
+                    Średnia_odległość: `${toMlnKm(1.000)} mln km`, 
+                    Czas_podróży_światła: "8 min 20 sek", /* DODANO */
+                    Ciekawostka: "Jedyna planeta z życiem." 
+                } 
             },
             { 
                 name: "Mars", size: 1.2, distance: 55, orbitPeriod: 687, dayLength: 1.03, epochOffsetAngle: 5.5, 
                 color: 0xCC5500,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/marsmap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg', 
-                lightTravelTime: "12 min 40 sek",
-                details: { Typ: "Planeta skalista", Masa: `0.107 M<sub>&#8853;</sub>`, Okres_orbitalny: "687 dni", Średnia_odległość: `${toMlnKm(1.524)} mln km`, Ciekawostka: "Nazywany 'Czerwoną Planetą'." } 
+                details: { 
+                    Typ: "Planeta skalista", 
+                    Masa: `0.107 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "687 dni", 
+                    Średnia_odległość: `${toMlnKm(1.524)} mln km`, 
+                    Czas_podróży_światła: "12 min 40 sek", /* DODANO */
+                    Ciekawostka: "Nazywany 'Czerwoną Planetą'." 
+                } 
             },
             { 
                 name: "Jowisz", size: 6, distance: 90, orbitPeriod: 4333, dayLength: 0.41, epochOffsetAngle: 1.2, 
                 color: 0xa07848,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/jupitermap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jupiter_and_its_shrunken_Great_Red_Spot_%28cropped%29.jpg', 
-                lightTravelTime: "43 min 0 sek",
-                details: { Typ: "Gazowy olbrzym", Masa: `318 M<sub>&#8853;</sub>`, Okres_orbitalny: "11.86 lat", Średnia_odległość: `${toMlnKm(5.204)} mln km`, Ciekawostka: "Największa planeta Układu." } 
+                details: { 
+                    Typ: "Gazowy olbrzym", 
+                    Masa: `318 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "11.86 lat", 
+                    Średnia_odległość: `${toMlnKm(5.204)} mln km`, 
+                    Czas_podróży_światła: "43 min 0 sek", /* DODANO */
+                    Ciekawostka: "Największa planeta Układu." 
+                } 
             },
             { 
                 name: "Saturn", size: 5, distance: 120, orbitPeriod: 10759, dayLength: 0.44, epochOffsetAngle: 3.8, hasRings: true, 
@@ -220,24 +250,42 @@
                 ringMapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/saturnringcolor.jpg', 
                 ringAlphaMapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/saturnringalpha.png', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox_from_Cassini.jpg', 
-                lightTravelTime: "1h 19m 30s",
-                details: { Typ: "Gazowy olbrzym", Masa: `95 M<sub>&#8853;</sub>`, Okres_orbitalny: "29.4 lat", Średnia_odległość: `${toMlnKm(9.582)} mln km`, Ciekawostka: "Posiada spektakularne pierścienie." } 
+                details: { 
+                    Typ: "Gazowy olbrzym", 
+                    Masa: `95 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "29.4 lat", 
+                    Średnia_odległość: `${toMlnKm(9.582)} mln km`, 
+                    Czas_podróży_światła: "1 godz. 19 min", /* DODANO */
+                    Ciekawostka: "Posiada spektakularne pierścienie." 
+                } 
             },
             { 
                 name: "Uran", size: 3, distance: 150, orbitPeriod: 30687, dayLength: 0.72, epochOffsetAngle: 1.8, 
                 color: 0xAFEEEE,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/uranusmap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg', 
-                lightTravelTime: "2h 40m 0s",
-                details: { Typ: "Lodowy olbrzym", Masa: `14.5 M<sub>&#8853;</sub>`, Okres_orbitalny: "84 lata", Średnia_odległość: `${toMlnKm(19.229)} mln km`, Ciekawostka: "Obraca się 'na boku'." } 
+                details: { 
+                    Typ: "Lodowy olbrzym", 
+                    Masa: `14.5 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "84 lata", 
+                    Średnia_odległość: `${toMlnKm(19.229)} mln km`, 
+                    Czas_podróży_światła: "2 godz. 40 min", /* DODANO */
+                    Ciekawostka: "Obraca się 'na boku'." 
+                } 
             },
             { 
                 name: "Neptun", size: 3, distance: 180, orbitPeriod: 60190, dayLength: 0.67, epochOffsetAngle: 0.5, 
                 color: 0x00008B,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/neptunemap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/63/Neptune_-_Voyager_2_%2829347980835%29_cropped.jpg', 
-                lightTravelTime: "4h 10m 0s",
-                details: { Typ: "Lodowy olbrzym", Masa: `17 M<sub>&#8853;</sub>`, Okres_orbitalny: "165 lat", Średnia_odległość: `${toMlnKm(30.104)} mln km`, Ciekawostka: "Najbardziej oddalona planeta." } 
+                details: { 
+                    Typ: "Lodowy olbrzym", 
+                    Masa: `17 M<sub>&#8853;</sub>`, 
+                    Okres_orbitalny: "165 lat", 
+                    Średnia_odległość: `${toMlnKm(30.104)} mln km`, 
+                    Czas_podróży_światła: "4 godz. 10 min", /* DODANO */
+                    Ciekawostka: "Najbardziej oddalona planeta." 
+                } 
             }
         ];
 
@@ -410,7 +458,13 @@
 
             const sun = new THREE.Mesh(geo, mat);
             sun.name = "Słońce";
-            sun.userData.details = { Typ: "Gwiazda", Temperatura_powierzchni: `ok. 5500 &deg;C`, Wiek: "ok. 4.6 mld lat", Ciekawostka: "99.8% masy układu." };
+            sun.userData.details = { 
+                Typ: "Gwiazda", 
+                Temperatura_powierzchni: `ok. 5500 &deg;C`, 
+                Wiek: "ok. 4.6 mld lat", 
+                Czas_podróży_światła: "0 sek", /* DLA SŁOŃCA */
+                Ciekawostka: "99.8% masy układu." 
+            };
             sun.userData.imageUrl = 'https://upload.wikimedia.org/wikipedia/commons/7/73/Solar_Orbiter%E2%80%99s_widest_high-res_view_of_the_Sun_ESA508430.jpg';
             scene.add(sun);
             addLabel(sun, "Słońce");
@@ -524,6 +578,7 @@
             }
 
             let html = '';
+            // Używamy Object.entries, aby przeiterować przez klucze w kolejności zdefiniowanej w planetData
             for (const [key, val] of Object.entries(mesh.userData.details)) {
                 html += `<div class="flex justify-between border-b border-gray-700 pb-1">
                             <span class="font-medium text-gray-400">${key.replace(/_/g, ' ')}:</span>
@@ -535,19 +590,17 @@
         }
 
         let lastTime = 0;
+        let lastDateTimeUpdate = 0;
+
         function animate(time) {
             requestAnimationFrame(animate);
             const dt = time - lastTime;
-            
-            if (dt > 100) { // Aktualizacja UI co 100ms
-                updateDateTime();
-                lastTime = time;
-            }
+            lastTime = time;
 
-            // Używamy mniejszego timeScale, co oznacza, że simulationDays przyrasta wolniej.
-            // Poprawiłem też logikę, aby używała dt dla płynniejszego ruchu
+            // Używamy dt (różnicy czasu) dla płynniejszego ruchu
             const elapsedSeconds = dt / 1000;
-            const elapsedDays = elapsedSeconds * speedMultiplier * 0.01; // Skalujemy przyrost dnia do prędkości animacji
+            // Skalujemy przyrost dnia do prędkości animacji
+            const elapsedDays = elapsedSeconds * speedMultiplier * timeScale / 0.00005; 
             simulationDays += elapsedDays;
 
             planets.forEach(p => {
@@ -561,6 +614,12 @@
 
             controls.update();
             updateLabels();
+
+            if (time - lastDateTimeUpdate > 100) { // Aktualizacja UI co 100ms
+                updateDateTime();
+                lastDateTimeUpdate = time;
+            }
+
             renderer.render(scene, camera);
         }
 
