@@ -86,14 +86,15 @@
         </div>
     </div>
 
-    <!-- Panel kontroli prędkości -->
-    <div id="controls-panel" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 p-2 bg-gray-800/90 backdrop-blur-md rounded-xl shadow-2xl flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-3 z-10 w-max max-w-[90vw]">
+    <!-- Panel kontroli prędkości - układ kontrolowany przez JS w zależności od orientacji/rozmiaru -->
+    <div id="controls-panel" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 p-2 bg-gray-800/90 backdrop-blur-md rounded-xl shadow-2xl flex z-10 w-max max-w-[90vw] transition-all duration-300">
         
         <button id="set-current-date" onclick="setPlanetsToCurrentPositions()" 
                 class="px-3 py-2 md:px-4 md:py-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm whitespace-nowrap">
             Ustaw Dziś
         </button>
 
+        <!-- Sekcja przycisków prędkości jest zawsze w poziomie, ale jest elementem flex wewnątrz panelu -->
         <div class="flex space-x-2 justify-center">
             <button id="speed-x1" onclick="setSpeedMultiplier(1)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x1</button>
             <button id="speed-x10" onclick="setSpeedMultiplier(10)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x10</button>
@@ -280,7 +281,7 @@
             document.getElementById('planet-modal').classList.add('hidden');
         }
 
-        // --- DETEKCJA URZĄDZENIA ---
+        // --- DETEKCJA URZĄDZENIA I ORIENTACJA ---
         function detectDeviceAndShowInfo() {
             // Sprawdzenie czy urządzenie obsługuje dotyk
             const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -289,6 +290,31 @@
                 document.getElementById('mobile-instructions').classList.remove('hidden');
             } else {
                 document.getElementById('desktop-instructions').classList.remove('hidden');
+            }
+            
+            // Uruchomienie obsługi orientacji
+            handleOrientationChange();
+        }
+
+        function handleOrientationChange() {
+            const controlsPanel = document.getElementById('controls-panel');
+            // Szerokość breakpointa dla małych ekranów (np. 640px)
+            const isMobileView = window.innerWidth < 640; 
+            // Sprawdzenie, czy jesteśmy na urządzeniu mobilnym i czy jest to orientacja pozioma
+            const isLandscapeMobile = isMobileView && (window.innerWidth > window.innerHeight);
+
+            // Usunięcie starych klas układu
+            controlsPanel.classList.remove('flex-col', 'flex-row', 'space-y-2', 'space-x-3', 'space-x-0');
+            
+            if (isLandscapeMobile || !isMobileView) {
+                // Układ poziomy:
+                // - Domyślnie na desktopie/tablecie (gdy isMobileView jest false)
+                // - Na telefonie w orientacji poziomej (gdy isLandscapeMobile jest true)
+                controlsPanel.classList.add('flex-row', 'space-x-3', 'p-3');
+            } else {
+                // Układ pionowy:
+                // - Na telefonie w orientacji pionowej
+                controlsPanel.classList.add('flex-col', 'space-y-2', 'p-2');
             }
         }
 
@@ -326,7 +352,7 @@
             planetData.forEach(createPlanet);
             setPlanetsToCurrentPositions();
             
-            // Wywołanie detekcji instrukcji
+            // Wywołanie detekcji instrukcji i obsługi orientacji
             detectDeviceAndShowInfo();
 
             // Event listenery
@@ -523,6 +549,9 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Uruchomienie obsługi orientacji przy zmianie rozmiaru okna
+            handleOrientationChange();
         }
 
         window.onload = function() {
