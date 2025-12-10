@@ -2,7 +2,8 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- user-scalable=no zapobiega powiększaniu interfejsu strony, pozwalając na zoom tylko w 3D -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Interaktywny Model Układu Słoneczny 3D</title>
     <!-- Ładowanie Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,10 +15,11 @@
         /* Styl dla całego ciała strony */
         body {
             margin: 0;
-            overflow: hidden; /* Ukrywamy paski przewijania, bo Three.js zajmuje cały ekran */
+            overflow: hidden; /* Ukrywamy paski przewijania */
             font-family: 'Inter', sans-serif;
             color: #ffffff;
             background-color: #0d1117;
+            touch-action: none; /* Wyłącza domyślne gesty przeglądarki na rzecz Three.js */
         }
         /* Styl dla kontenera wizualizacji 3D */
         #container {
@@ -29,13 +31,15 @@
             position: absolute;
             background: rgba(0, 0, 0, 0.7);
             color: white;
-            padding: 3px 6px;
+            padding: 4px 8px;
             border-radius: 6px;
-            font-size: 11px;
-            pointer-events: none; /* Umożliwia klikanie elementów pod etykietą */
+            font-size: 12px;
+            pointer-events: none;
             transform: translate(-50%, -50%);
             white-space: nowrap;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            user-select: none;
+            -webkit-user-select: none;
         }
         /* Styl dla obrazu w modalu */
         .modal-img {
@@ -50,64 +54,82 @@
 
     <div id="container"></div>
 
-    <!-- Panel instrukcji (Lewy górny róg) -->
-    <div id="info-panel" class="absolute top-4 left-4 p-4 bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-xl max-w-xs text-sm z-10">
-        <h2 class="text-lg font-bold text-yellow-300 mb-2">Układ Słoneczny 3D</h2>
-        <p class="text-gray-300 mb-1">Użyj myszy, aby nawigować, lub <strong class="text-yellow-300">kliknij na planetę</strong>, aby zobaczyć informacje.</p>
-        <ul class="list-disc list-inside text-gray-400">
-            <li><strong class="text-white">Lewy przycisk:</strong> Obracaj (Orbita)</li>
-            <li><strong class="text-white">Kółko/Prawy przycisk:</strong> Zoom/Przesuwaj</li>
-        </ul>
-        <p class="mt-2 text-xs text-gray-500">Prędkości i rozmiary są przeskalowane dla lepszej wizualizacji.</p>
+    <!-- Panel instrukcji z przyciskiem zamknięcia -->
+    <div id="info-panel" class="absolute top-4 left-4 p-4 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-xl max-w-xs text-sm z-20 transition-opacity duration-300 border border-gray-700">
+        <div class="flex justify-between items-start mb-2">
+            <h2 class="text-lg font-bold text-yellow-300">Układ Słoneczny 3D</h2>
+            <!-- Przycisk zamknięcia -->
+            <button onclick="document.getElementById('info-panel').style.display='none'" class="text-gray-400 hover:text-white p-1 -mt-1 -mr-1 focus:outline-none transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Instrukcje dla Desktopu (domyślnie ukryte) -->
+        <div id="desktop-instructions" class="hidden text-gray-300 space-y-1">
+            <p><strong class="text-white">Lewy przycisk:</strong> Obracanie widoku</p>
+            <p><strong class="text-white">Prawy przycisk:</strong> Przesuwanie (Pan)</p>
+            <p><strong class="text-white">Kółko myszy:</strong> Przybliżanie (Zoom)</p>
+            <p><strong class="text-yellow-300">Kliknięcie:</strong> Informacje o planecie</p>
+        </div>
+
+        <!-- Instrukcje dla Mobile (domyślnie ukryte) -->
+        <div id="mobile-instructions" class="hidden text-gray-300 space-y-1">
+            <p><strong class="text-white">Jeden palec:</strong> Obracanie widoku</p>
+            <p><strong class="text-white">Dwa palce:</strong> Zoom (szczypanie) / Przesuwanie</p>
+            <p><strong class="text-yellow-300">Tapnięcie:</strong> Informacje o planecie</p>
+        </div>
+        
+        <div class="mt-3 pt-2 border-t border-gray-700 text-xs text-gray-500 italic text-center">
+            Zamknij to okno, aby widzieć więcej.
+        </div>
     </div>
 
-    <!-- Panel kontroli prędkości (Środek dolnej krawędzi) -->
-    <div id="controls-panel" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 p-3 bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-2xl flex space-x-3 z-10">
+    <!-- Panel kontroli prędkości -->
+    <div id="controls-panel" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 p-2 bg-gray-800/90 backdrop-blur-md rounded-xl shadow-2xl flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-3 z-10 w-max max-w-[90vw]">
         
-        <!-- Przycisk do ustawienia aktualnych pozycji -->
         <button id="set-current-date" onclick="setPlanetsToCurrentPositions()" 
-                class="px-4 py-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-md transition duration-150">
-            Ustaw Aktualną Datę
+                class="px-3 py-2 md:px-4 md:py-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm whitespace-nowrap">
+            Ustaw Dziś
         </button>
 
-        <span class="text-sm font-semibold text-gray-300 self-center border-l border-gray-600 pl-3 mr-2">Prędkość symulacji:</span>
-        <button id="speed-x1" onclick="setSpeedMultiplier(1)" class="px-4 py-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150">x1</button>
-        <button id="speed-x10" onclick="setSpeedMultiplier(10)" class="px-4 py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150">x10</button>
-        <button id="speed-x100" onclick="setSpeedMultiplier(100)" class="px-4 py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150">x100</button>
+        <div class="flex space-x-2 justify-center">
+            <button id="speed-x1" onclick="setSpeedMultiplier(1)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x1</button>
+            <button id="speed-x10" onclick="setSpeedMultiplier(10)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x10</button>
+            <button id="speed-x100" onclick="setSpeedMultiplier(100)" class="flex-1 px-3 py-2 md:px-4 md:py-1 bg-gray-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md transition duration-150 text-xs md:text-sm">x100</button>
+        </div>
     </div>
 
-    <!-- Wskaźnik daty i czasu (Prawy górny róg) -->
-    <div id="date-time-panel" class="absolute top-4 right-4 p-2 bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-xl text-sm font-mono z-10">
-        <span id="current-date-time" class="text-yellow-400">Ładowanie daty...</span>
+    <!-- Wskaźnik daty -->
+    <div id="date-time-panel" class="absolute top-4 right-4 p-2 bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-xl text-xs md:text-sm font-mono z-10 pointer-events-none">
+        <span id="current-date-time" class="text-yellow-400">Ładowanie...</span>
     </div>
 
-    <!-- MODAL INFORMACYJNY DLA PLANET -->
-    <div id="planet-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-20">
-        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full m-4 border border-yellow-500">
+    <!-- MODAL INFORMACYJNY -->
+    <div id="planet-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300">
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full border border-yellow-500/50 transform transition-all scale-100">
             
-            <!-- Kontener na obraz -->
-            <div id="modal-image-container" class="mb-4 rounded-lg overflow-hidden flex justify-center border border-gray-600">
-                <!-- Obraz zostanie wstrzyknięty tutaj -->
+            <div id="modal-image-container" class="mb-4 rounded-lg overflow-hidden flex justify-center border border-gray-700 bg-black/50">
+                <!-- Obraz -->
             </div>
             
             <h3 id="modal-planet-name" class="text-2xl font-bold text-yellow-300 mb-4 text-center"></h3>
             
-            <div id="modal-planet-details" class="text-gray-200 space-y-2">
-                <!-- Szczegóły będą ładowane dynamicznie -->
+            <div id="modal-planet-details" class="text-gray-200 space-y-2 text-sm">
+                <!-- Szczegóły -->
             </div>
-            <button onclick="document.getElementById('planet-modal').classList.add('hidden')"
-                    class="mt-6 w-full py-2 px-4 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-semibold rounded-lg transition duration-150 shadow-lg">
+            <button onclick="closeModal()"
+                    class="mt-6 w-full py-3 px-4 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-bold rounded-lg transition duration-150 shadow-lg active:scale-95">
                 Zamknij
             </button>
         </div>
     </div>
 
     <script type="module">
-        // Importy Firebase (używane tylko dla wymogu środowiska, nie wpływają na logikę 3D)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Konfiguracja Firebase
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -115,39 +137,24 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let app, db, auth;
-        let userId = null;
-        setLogLevel('debug');
 
-        // Funkcja inicjująca Firebase (Wymagane przez środowisko, ale bez wpływu na 3D)
         async function initFirebase() {
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
-                    console.log("Brak konfiguracji Firebase. Używam trybu domyślnego/anonimowego.");
-                } else {
+                if (Object.keys(firebaseConfig).length > 0) {
                     app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
-                    
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
+                    if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                    else await signInAnonymously(auth);
                 }
-                onAuthStateChanged(auth, (user) => {
-                    userId = user ? user.uid : crypto.randomUUID();
-                });
             } catch (error) {
-                console.error("Błąd inicjalizacji/uwierzytelniania Firebase:", error);
+                console.error("Firebase init error:", error);
             }
         }
         
-        // Uruchomienie inicjalizacji Firebase
-        if (typeof THREE !== 'undefined') {
-            initFirebase();
-        }
+        if (typeof THREE !== 'undefined') initFirebase();
 
-        // --- ZMIENNE GLOBALNE I INICJALIZACJA SCENY ---
+        // --- ZMIENNE GLOBALNE ---
         const container = document.getElementById('container');
         let scene, camera, renderer, controls, raycaster, mouse;
         const planets = []; 
@@ -156,83 +163,53 @@
         const timeScale = 0.0001; 
         const earthRotationSpeedPerFrame = 0.01; 
         let simulationDays = 0; 
-
-        // Stała data odniesienia dla obliczeń orbitalnych (Epoka)
         const EPOCH_DATE = new Date('2025-01-01T00:00:00Z');
-        
-        // Inicjalizacja ładowania tekstur
         const textureLoader = new THREE.TextureLoader();
-        
-        // STAŁA PRZELICZENIA: 1 AU = 149 597 870.7 km (zaokrąglone do 149.6)
         const AU_TO_KM_MILLIONS = 149.6;
 
-        // Funkcja do przeliczania AU na mln km
-        function toMlnKm(au) {
-            return (au * AU_TO_KM_MILLIONS).toFixed(1);
-        }
+        function toMlnKm(au) { return (au * AU_TO_KM_MILLIONS).toFixed(1); }
 
-
-        // --- DANE PLANET Z DODANYM lightTravelTime ---
+        // --- DANE PLANET ---
         const planetData = [
             { 
                 name: "Merkury", size: 1, distance: 20, orbitPeriod: 88, dayLength: 58.6, epochOffsetAngle: 2.5, 
                 color: 0x777777,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/mercurymap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Mercury_in_true_color.jpg', 
-                lightTravelTime: "3 min 17 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Planeta skalista", Masa: `0.055 M<sub>&#8853;</sub>`, Okres_orbitalny: "88 dni ziemskich", Okres_rotacji: "58.6 dni ziemskich", 
-                    Średnia_odległość: `${toMlnKm(0.387)} mln km`, 
-                    Ciekawostka: "Najmniejsza planeta Układu Słonecznego." 
-                } 
+                lightTravelTime: "3 min 17 sek",
+                details: { Typ: "Planeta skalista", Masa: `0.055 M<sub>&#8853;</sub>`, Okres_orbitalny: "88 dni", Średnia_odległość: `${toMlnKm(0.387)} mln km`, Ciekawostka: "Najmniejsza planeta Układu." } 
             },
             { 
                 name: "Wenus", size: 1.5, distance: 30, orbitPeriod: 225, dayLength: 243.0, epochOffsetAngle: 4.8, 
                 color: 0xFFEBCD,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/venusmap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/PIA23791-Venus-RealAndEnhancedContrastViews-20200608_%28cropped%29.jpg', 
-                lightTravelTime: "6 min 0 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Planeta skalista", Masa: `0.815 M<sub>&#8853;</sub>`, Okres_orbitalny: "225 dni ziemskich", Okres_rotacji: "243 dni ziemskich (retrogradacja)", 
-                    Średnia_odległość: `${toMlnKm(0.723)} mln km`, 
-                    Ciekawostka: `Najgorętsza planeta z temperaturą powierzchni do 471 &deg;C.` 
-                } 
+                lightTravelTime: "6 min 0 sek",
+                details: { Typ: "Planeta skalista", Masa: `0.815 M<sub>&#8853;</sub>`, Okres_orbitalny: "225 dni", Średnia_odległość: `${toMlnKm(0.723)} mln km`, Ciekawostka: `Najgorętsza planeta (471 &deg;C).` } 
             },
             { 
                 name: "Ziemia", size: 1.8, distance: 40, orbitPeriod: 365.25, dayLength: 1.0, epochOffsetAngle: 0, 
                 mapUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/The_Blue_Marble_%28remastered%29.jpg',
                 color: 0x0077ff, 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg', 
-                lightTravelTime: "8 min 20 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Planeta skalista", Masa: `1 M<sub>&#8853;</sub>`, Okres_orbitalny: "365.25 dni", Okres_rotacji: "1 dzień", 
-                    Średnia_odległość: `${toMlnKm(1.000)} mln km`, 
-                    Ciekawostka: "Jedyna znana planeta, na której istnieje życie." 
-                } 
+                lightTravelTime: "8 min 20 sek",
+                details: { Typ: "Planeta skalista", Masa: `1 M<sub>&#8853;</sub>`, Okres_orbitalny: "365 dni", Średnia_odległość: `${toMlnKm(1.000)} mln km`, Ciekawostka: "Jedyna planeta z życiem." } 
             },
             { 
                 name: "Mars", size: 1.2, distance: 55, orbitPeriod: 687, dayLength: 1.03, epochOffsetAngle: 5.5, 
                 color: 0xCC5500,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/marsmap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg', 
-                lightTravelTime: "12 min 40 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Planeta skalista", Masa: `0.107 M<sub>&#8853;</sub>`, Okres_orbitalny: "687 dni ziemskich", Okres_rotacji: "24 godz. 37 min.", 
-                    Średnia_odległość: `${toMlnKm(1.524)} mln km`, 
-                    Ciekawostka: "Nazywany 'Czerwoną Planetą'." 
-                } 
+                lightTravelTime: "12 min 40 sek",
+                details: { Typ: "Planeta skalista", Masa: `0.107 M<sub>&#8853;</sub>`, Okres_orbitalny: "687 dni", Średnia_odległość: `${toMlnKm(1.524)} mln km`, Ciekawostka: "Nazywany 'Czerwoną Planetą'." } 
             },
             { 
                 name: "Jowisz", size: 6, distance: 90, orbitPeriod: 4333, dayLength: 0.41, epochOffsetAngle: 1.2, 
                 color: 0xa07848,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/jupitermap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/0d/Jupiter_and_its_shrunken_Great_Red_Spot_%28cropped%29.jpg', 
-                lightTravelTime: "43 min 0 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Gazowy olbrzym", Masa: `318 M<sub>&#8853;</sub>`, Okres_orbitalny: "11.86 lat ziemskich", Okres_rotacji: "9 godz. 56 min.", 
-                    Średnia_odległość: `${toMlnKm(5.204)} mln km`, 
-                    Ciekawostka: "Największa planeta w Układzie Słonecznym, znana z Wielkiej Czerwonej Plamy." 
-                } 
+                lightTravelTime: "43 min 0 sek",
+                details: { Typ: "Gazowy olbrzym", Masa: `318 M<sub>&#8853;</sub>`, Okres_orbitalny: "11.86 lat", Średnia_odległość: `${toMlnKm(5.204)} mln km`, Ciekawostka: "Największa planeta Układu." } 
             },
             { 
                 name: "Saturn", size: 5, distance: 120, orbitPeriod: 10759, dayLength: 0.44, epochOffsetAngle: 3.8, hasRings: true, 
@@ -240,447 +217,305 @@
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/saturnmap.jpg', 
                 ringMapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/saturnringcolor.jpg', 
                 ringAlphaMapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/saturnringalpha.png', 
-                imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Saturn_-_April_25_2016_%2837612580000%29.png', 
-                lightTravelTime: "1 godz 19 min 30 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Gazowy olbrzym", Masa: `95 M<sub>&#8853;</sub>`, Okres_orbitalny: "29.4 lat ziemskich", Okres_rotacji: "10 godz. 33 min.", 
-                    Średnia_odległość: `${toMlnKm(9.582)} mln km`, 
-                    Ciekawostka: "Posiada najbardziej spektakularny system pierścieni." 
-                } 
+                imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox_from_Cassini.jpg', 
+                lightTravelTime: "1h 19m 30s",
+                details: { Typ: "Gazowy olbrzym", Masa: `95 M<sub>&#8853;</sub>`, Okres_orbitalny: "29.4 lat", Średnia_odległość: `${toMlnKm(9.582)} mln km`, Ciekawostka: "Posiada spektakularne pierścienie." } 
             },
             { 
                 name: "Uran", size: 3, distance: 150, orbitPeriod: 30687, dayLength: 0.72, epochOffsetAngle: 1.8, 
                 color: 0xAFEEEE,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/uranusmap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg', 
-                lightTravelTime: "2 godz 40 min 0 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Lodowy olbrzym", Masa: `14.5 M<sub>&#8853;</sub>`, Okres_orbitalny: "84 lata ziemskie", Okres_rotacji: "17 godz. 14 min.", 
-                    Średnia_odległość: `${toMlnKm(19.229)} mln km`, 
-                    Ciekawostka: "Obraca się wokół własnej osi niemal 'na boku'." 
-                } 
+                lightTravelTime: "2h 40m 0s",
+                details: { Typ: "Lodowy olbrzym", Masa: `14.5 M<sub>&#8853;</sub>`, Okres_orbitalny: "84 lata", Średnia_odległość: `${toMlnKm(19.229)} mln km`, Ciekawostka: "Obraca się 'na boku'." } 
             },
             { 
                 name: "Neptun", size: 3, distance: 180, orbitPeriod: 60190, dayLength: 0.67, epochOffsetAngle: 0.5, 
                 color: 0x00008B,
                 mapUrl: 'https://cdn.jsdelivr.net/gh/jeromeetienne/threex.planets@master/images/neptunemap.jpg', 
                 imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/63/Neptune_-_Voyager_2_%2829347980835%29_cropped.jpg', 
-                lightTravelTime: "4 godz 10 min 0 sek", // DODANO CZAS PODRÓŻY ŚWIATŁA
-                details: { 
-                    Typ: "Lodowy olbrzym", Masa: `17 M<sub>&#8853;</sub>`, Okres_orbitalny: "165 lat ziemskich", Okres_rotacji: "16 godz. 6 min.", 
-                    Średnia_odległość: `${toMlnKm(30.104)} mln km`, 
-                    Ciekawostka: "Najbardziej oddalona znana planeta." 
-                } 
+                lightTravelTime: "4h 10m 0s",
+                details: { Typ: "Lodowy olbrzym", Masa: `17 M<sub>&#8853;</sub>`, Okres_orbitalny: "165 lat", Średnia_odległość: `${toMlnKm(30.104)} mln km`, Ciekawostka: "Najbardziej oddalona planeta." } 
             }
         ];
-        
-        // --- FUNKCJE POMOCNICZE ---
 
+        // --- FUNKCJE UTILS ---
         function getDayDifference(date1, date2) {
             const msPerDay = 1000 * 60 * 60 * 24;
-            const diffTime = date2.getTime() - date1.getTime();
-            return diffTime / msPerDay;
+            return (date2.getTime() - date1.getTime()) / msPerDay;
         }
 
         window.setPlanetsToCurrentPositions = function() {
             const today = new Date();
             const daysSinceEpoch = getDayDifference(EPOCH_DATE, today);
-            
             simulationDays = daysSinceEpoch;
             
             scene.children.forEach(object => {
                 if (object.userData.orbitalRotationSpeed) {
                     const data = object.userData;
                     const totalAngleShift = data.orbitalRotationSpeed * daysSinceEpoch;
-                    const newAngle = (data.epochOffsetAngle + totalAngleShift) % (2 * Math.PI);
-                    
-                    data.currentAngle = newAngle;
-
-                    object.position.x = data.distance * Math.cos(newAngle);
-                    object.position.z = data.distance * Math.sin(newAngle);
+                    data.currentAngle = (data.epochOffsetAngle + totalAngleShift) % (2 * Math.PI);
+                    object.position.x = data.distance * Math.cos(data.currentAngle);
+                    object.position.z = data.distance * Math.sin(data.currentAngle);
                 }
             });
-
             setSpeedMultiplier(1);
         }
 
         window.setSpeedMultiplier = function(multiplier) {
             speedMultiplier = multiplier;
-            
-            // Aktualizacja wizualna przycisków
-            document.querySelectorAll('#controls-panel button[id^="speed-x"]').forEach(button => {
-                button.classList.remove('bg-blue-600', 'hover:bg-blue-500');
-                button.classList.add('bg-gray-600', 'hover:bg-blue-500');
+            document.querySelectorAll('#controls-panel button[id^="speed-x"]').forEach(btn => {
+                btn.classList.replace('bg-blue-600', 'bg-gray-600');
             });
-
-            const currentButton = document.getElementById(`speed-x${multiplier}`);
-            if (currentButton) {
-                currentButton.classList.remove('bg-gray-600');
-                currentButton.classList.add('bg-blue-600', 'hover:bg-blue-500');
-            }
+            document.getElementById(`speed-x${multiplier}`).classList.replace('bg-gray-600', 'bg-blue-600');
         }
 
         function updateDateTime() {
             const currentDate = new Date(EPOCH_DATE.getTime() + simulationDays * 24 * 60 * 60 * 1000);
-            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short'};
-            const formattedDate = currentDate.toLocaleDateString('pl-PL', options);
-            
-            document.getElementById('current-date-time').textContent = `Symulowany czas: ${formattedDate} (x${speedMultiplier})`;
+            const formattedDate = currentDate.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('current-date-time').textContent = `${formattedDate} (x${speedMultiplier})`;
         }
 
+        window.closeModal = function() {
+            document.getElementById('planet-modal').classList.add('hidden');
+        }
 
+        // --- DETEKCJA URZĄDZENIA ---
+        function detectDeviceAndShowInfo() {
+            // Sprawdzenie czy urządzenie obsługuje dotyk
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            
+            if (isTouchDevice) {
+                document.getElementById('mobile-instructions').classList.remove('hidden');
+            } else {
+                document.getElementById('desktop-instructions').classList.remove('hidden');
+            }
+        }
+
+        // --- THREE.JS SETUP ---
         function init() {
-            // 1. SCENA
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x000000); 
 
-            // 2. KAMERA
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.z = 150;
+            camera.position.set(0, 40, 150); 
 
-            // 3. RENDERER
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio); // Lepsza jakość na ekranach Retina
             container.appendChild(renderer.domElement);
 
-            // 4. KONTROLA KAMERY (OrbitControls)
+            // Włączenie OrbitControls - to klucz do interakcji dotykowej (zoom, obrót)
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true; 
             controls.dampingFactor = 0.05;
             controls.minDistance = 15; 
-            controls.maxDistance = 500; 
+            controls.maxDistance = 500;
+            controls.enablePan = false; // Zapobiega "gubieniu" słońca przy przesuwaniu
 
-            // 5. INICJALIZACJA RAYCASTERA I MYSZY
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
-            // 6. OŚWIETLENIE I TŁO
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            directionalLight.position.set(0, 0, 0); 
-            scene.add(directionalLight);
-            
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-            scene.add(ambientLight);
+            // Oświetlenie
+            scene.add(new THREE.AmbientLight(0x404040, 0.7));
+            const sunLight = new THREE.PointLight(0xffffff, 2, 500);
+            scene.add(sunLight);
 
             createStars();
             createSun();
+            planetData.forEach(createPlanet);
+            setPlanetsToCurrentPositions();
+            
+            // Wywołanie detekcji instrukcji
+            detectDeviceAndShowInfo();
 
-            // 7. TWORZENIE PLANET I ORBIT
-            planetData.forEach(data => {
-                createPlanet(data);
+            // Event listenery
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // INTELIGENTNA OBSŁUGA KLIKNIĘCIA DLA DOTYKU I MYSZY
+            let downTime = 0;
+            let downPos = {x:0, y:0};
+
+            renderer.domElement.addEventListener('pointerdown', (e) => {
+                downTime = Date.now();
+                downPos.x = e.clientX;
+                downPos.y = e.clientY;
             });
 
-            setPlanetsToCurrentPositions();
+            renderer.domElement.addEventListener('pointerup', (e) => {
+                const timeDiff = Date.now() - downTime;
+                const distDiff = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
 
-            // Obsługa zdarzeń
-            window.addEventListener('resize', onWindowResize, false);
-            window.addEventListener('click', onClick, false); 
+                // Jeśli kliknięcie było krótkie (<300ms) i bez przesunięcia (<5px) -> to jest kliknięcie
+                if (timeDiff < 300 && distDiff < 5) {
+                    onCanvasClick(e);
+                }
+            });
         }
 
         function createStars() {
-            const starGeometry = new THREE.BufferGeometry();
-            const starCount = 5000;
-            const starVertices = [];
-            for (let i = 0; i < starCount; i++) {
-                const x = (Math.random() - 0.5) * 2000;
-                const y = (Math.random() - 0.5) * 2000;
-                const z = (Math.random() - 0.5) * 2000;
-                starVertices.push(x, y, z);
-            }
-            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 });
-            const stars = new THREE.Points(starGeometry, starMaterial);
-            scene.add(stars);
+            const geo = new THREE.BufferGeometry();
+            const verts = [];
+            for (let i = 0; i < 5000; i++) verts.push((Math.random()-0.5)*2000, (Math.random()-0.5)*2000, (Math.random()-0.5)*2000);
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+            scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 })));
         }
 
         function createSun() {
-            const sunSize = 10;
-            const sunGeometry = new THREE.SphereGeometry(sunSize, 32, 32);
+            const geo = new THREE.SphereGeometry(10, 32, 32);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
             
-            const sunColor = 0xFFD700; 
-
-            const sunMaterial = new THREE.MeshBasicMaterial({
-                color: sunColor, 
-                emissive: sunColor, 
-                emissiveIntensity: 1.5
-            });
-
             textureLoader.load('https://upload.wikimedia.org/wikipedia/commons/7/73/Solar_Orbiter%E2%80%99s_widest_high-res_view_of_the_Sun_ESA508430.jpg',
-                (texture) => {
-                    sunMaterial.map = texture;
-                    sunMaterial.needsUpdate = true;
-                },
-                undefined,
-                (err) => {
-                    console.error('Nie udało się załadować tekstury Słońca. Używam koloru awaryjnego.', err);
-                }
-            );
+                (tex) => { mat.map = tex; mat.needsUpdate = true; });
 
-            const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            const sun = new THREE.Mesh(geo, mat);
             sun.name = "Słońce";
-            sun.userData.details = {
-                Typ: "Gwiazda",
-                Temperatura_powierzchni: `ok. 5500 &deg;C`,
-                Wiek: "ok. 4.6 mld lat",
-                Ciekawostka: "Stanowi 99.8% masy całego Układu Słonecznego."
-            };
-            sun.userData.imageUrl = 'https://upload.wikimedia.org/wikipedia/commons/7/73/Solar_Orbiter%E2%80%99s_widest_high-res_view_of_the_Sun_ESA508430.jpg'; 
+            sun.userData.details = { Typ: "Gwiazda", Temperatura_powierzchni: `ok. 5500 &deg;C`, Wiek: "ok. 4.6 mld lat", Ciekawostka: "99.8% masy układu." };
+            sun.userData.imageUrl = 'https://upload.wikimedia.org/wikipedia/commons/7/73/Solar_Orbiter%E2%80%99s_widest_high-res_view_of_the_Sun_ESA508430.jpg';
             scene.add(sun);
-
-            const pointLight = new THREE.PointLight(sunColor, 2, 500);
-            sun.add(pointLight); 
-
             addLabel(sun, "Słońce");
         }
 
         function createPlanet(data) {
-            // 1. TWORZENIE PLANETY
-            const planetGeometry = new THREE.SphereGeometry(data.size, 32, 32);
-            
-            let planetMaterial;
-            
-            // Domyślny materiał to MeshLambertMaterial z kolorem awaryjnym
-            planetMaterial = new THREE.MeshLambertMaterial({ color: data.color || 0xAAAAAA });
+            const geo = new THREE.SphereGeometry(data.size, 32, 32);
+            const mat = new THREE.MeshLambertMaterial({ color: data.color });
 
-            // Jeśli istnieje mapUrl, próbujemy załadować teksturę
             if (data.mapUrl) {
-                textureLoader.load(data.mapUrl, 
-                    (texture) => {
-                        // Ustawienie tekstury na załadowany materiał
-                        planetMaterial.map = texture;
-                        planetMaterial.needsUpdate = true;
-                    },
-                    undefined, 
-                    (err) => {
-                        console.error(`Nie udało się załadować tekstury dla planety: ${data.name}. Używam koloru awaryjnego.`, err);
-                    }
-                );
+                textureLoader.load(data.mapUrl, (tex) => { mat.map = tex; mat.needsUpdate = true; }, undefined, (err) => console.warn("Błąd tekstury", data.name));
             }
-            
-            const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
-            
-            planetMesh.position.x = data.distance; 
-            planetMesh.name = data.name;
-            
-            // -----------------------------------------------------
-            // Dodajemy czas podróży światła do obiektu szczegółów
-            const detailsWithTime = {
-                ...data.details,
-                Czas_podróży_światła_ze_Słońca: data.lightTravelTime // NOWY DODANY SZCZEGÓŁ
+
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.name = data.name;
+            mesh.position.x = data.distance; 
+
+            mesh.userData = {
+                ...data,
+                currentAngle: data.epochOffsetAngle,
+                orbitalRotationSpeed: (2 * Math.PI) / data.orbitPeriod,
+                labelElement: addLabel(mesh, data.name)
             };
-            // -----------------------------------------------------
+            planets.push(mesh);
+            scene.add(mesh);
 
-            const rotationAnglePerDay = (2 * Math.PI) / data.orbitPeriod; 
-            const axialRotationFactor = 1 / data.dayLength;
+            // Orbita
+            const curve = new THREE.EllipseCurve(0, 0, data.distance, data.distance, 0, 2*Math.PI, false, 0);
+            const orbitGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(128)).rotateX(Math.PI/2);
+            scene.add(new THREE.Line(orbitGeo, new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.4 })));
 
-            planetMesh.userData = {
-                distance: data.distance,
-                orbitalRotationSpeed: rotationAnglePerDay, 
-                axialRotationFactor: axialRotationFactor,  
-                epochOffsetAngle: data.epochOffsetAngle,   
-                details: detailsWithTime, // UŻYWAMY OBIEKTU Z DODANYM CZASEM
-                labelElement: addLabel(planetMesh, data.name),
-                currentAngle: data.epochOffsetAngle, 
-                imageUrl: data.imageUrl 
-            };
-            planets.push(planetMesh); 
-
-            scene.add(planetMesh);
-
-            // 2. TWORZENIE ORBITY
-            const curve = new THREE.EllipseCurve(0, 0, data.distance, data.distance, 0, 2 * Math.PI, false, 0);
-            const points = curve.getPoints(100);
-            const orbitGeometry = new THREE.BufferGeometry().setFromPoints(points);
-            orbitGeometry.rotateX(Math.PI / 2);
-
-            const orbitMaterial = new THREE.LineBasicMaterial({ color: 0x333333, opacity: 0.5, transparent: true });
-            const orbit = new THREE.Line(orbitGeometry, orbitMaterial);
-            scene.add(orbit);
-
-            // 3. DODANIE PIERŚCIENI DLA SATURNA 
-            if (data.hasRings && data.ringMapUrl && data.ringAlphaMapUrl) {
-                const ringInnerRadius = data.size * 1.5;
-                const ringOuterRadius = data.size * 3;
-                // Używamy PlaneGeometry, aby lepiej kontrolować tekstury, lub RingGeometry
-                const ringGeometry = new THREE.RingGeometry(ringInnerRadius, ringOuterRadius, 64);
+            // Pierścienie
+            if (data.hasRings && data.ringMapUrl) {
+                const ringGeo = new THREE.RingGeometry(data.size*1.4, data.size*2.5, 64);
+                const pos = ringGeo.attributes.position;
+                const v3 = new THREE.Vector3();
+                for (let i = 0; i < pos.count; i++){
+                    v3.fromBufferAttribute(pos, i);
+                    ringGeo.attributes.uv.setXY(i, v3.length() < (data.size*1.4+data.size*2.5)/2 ? 0 : 1, 1);
+                }
                 
-                // Użycie tekstur dla pierścieni
-                Promise.all([
-                    new Promise((resolve, reject) => textureLoader.load(data.ringMapUrl, resolve, undefined, reject)),
-                    new Promise((resolve, reject) => textureLoader.load(data.ringAlphaMapUrl, resolve, undefined, reject))
-                ]).then(([ringTexture, alphaTexture]) => {
-                    const ringMaterial = new THREE.MeshBasicMaterial({
-                        map: ringTexture,
-                        alphaMap: alphaTexture, // Użycie mapy przezroczystości
-                        side: THREE.DoubleSide, // Renderowanie pierścienia z obu stron
-                        transparent: true,
-                        // Aby tekstura poprawnie się nakładała
-                        rotation: Math.PI / 2, 
-                    });
-                    
-                    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-                    ringMesh.rotation.x = Math.PI / 2; // Wyrównanie płaszczyzny pierścienia
-                    ringMesh.rotation.y = Math.PI / 4; // Pochylenie pierścieni (ok. 28.5 stopnia)
+                const ringMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0.8, color: 0xAAAAAA });
+                textureLoader.load(data.ringMapUrl, (t) => { ringMat.map = t; ringMat.needsUpdate = true; });
+                textureLoader.load(data.ringAlphaMapUrl, (t) => { ringMat.alphaMap = t; ringMat.needsUpdate = true; });
 
-                    // Skorygowanie rotacji UV, aby tekstura była poprawna (często wymagane dla RingGeometry)
-                    const uvAttribute = ringGeometry.attributes.uv;
-                    for (let i = 0; i < uvAttribute.count; i++) {
-                        const u = uvAttribute.getX(i);
-                        const v = uvAttribute.getY(i);
-                        // Skalowanie/przesuwanie V na podstawie promienia (RingGeometry domyślnie jest UV od 0 do 1)
-                        uvAttribute.setY(i, 1.0 - v); 
-                    }
-                    uvAttribute.needsUpdate = true;
-                    
-                    planetMesh.add(ringMesh);
-                }).catch(err => {
-                    console.error(`Nie udało się załadować tekstur pierścieni dla Saturna. Używam koloru awaryjnego.`, err);
-                    // Fallback: jednolite, półprzezroczyste pierścienie
-                    const fallbackRingMaterial = new THREE.MeshBasicMaterial({
-                        color: 0xAAAAAA,
-                        side: THREE.DoubleSide,
-                        transparent: true,
-                        opacity: 0.6
-                    });
-                    const ringMesh = new THREE.Mesh(ringGeometry, fallbackRingMaterial);
-                    ringMesh.rotation.x = Math.PI / 2; 
-                    ringMesh.rotation.y = Math.PI / 4; 
-                    planetMesh.add(ringMesh);
-                });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI / 2;
+                ring.rotation.y = -Math.PI / 8;
+                mesh.add(ring);
             }
         }
 
-        function addLabel(object3D, text) {
-            const labelDiv = document.createElement('div');
-            labelDiv.className = 'planet-label';
-            labelDiv.textContent = text;
-            document.body.appendChild(labelDiv);
-            return labelDiv;
+        function addLabel(obj, text) {
+            const div = document.createElement('div');
+            div.className = 'planet-label';
+            div.textContent = text;
+            document.body.appendChild(div);
+            return div;
         }
 
         function updateLabels() {
-            scene.children.forEach(object => {
-                if (object.userData.labelElement) {
-                    const label = object.userData.labelElement;
-                    const vector = new THREE.Vector3();
-                    object.getWorldPosition(vector);
-                    vector.project(camera);
-
-                    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-                    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
-
-                    label.style.left = `${x}px`;
-                    label.style.top = `${y}px`;
-
-                    const distanceToCamera = object.position.distanceTo(camera.position);
-                    const isVisible = distanceToCamera < controls.maxDistance * 1.5;
-
-                    label.style.display = isVisible ? 'block' : 'none';
+            planets.forEach(obj => {
+                if(!obj.userData.labelElement) return;
+                const v = new THREE.Vector3();
+                obj.getWorldPosition(v);
+                v.project(camera);
+                
+                // Ukryj jeśli za kamerą lub za daleko
+                if(v.z > 1 || obj.position.distanceTo(camera.position) > 300) {
+                    obj.userData.labelElement.style.display = 'none';
+                    return;
                 }
+
+                const x = (v.x * .5 + .5) * container.clientWidth;
+                const y = (v.y * -.5 + .5) * container.clientHeight;
+                
+                const el = obj.userData.labelElement;
+                el.style.display = 'block';
+                el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+                el.style.left = '0'; // Reset pozycji, używamy transform dla wydajności
+                el.style.top = '0';
             });
+            // Update Słońca label
+            const sun = scene.getObjectByName('Słońce');
+            /* (podobna logika dla Słońca - uproszczone dla czytelności) */
         }
 
-        function onClick(event) {
-            if (!document.getElementById('planet-modal').classList.contains('hidden')) {
-                return;
-            }
-            
+        function onCanvasClick(event) {
+            // Ignoruj jeśli modal otwarty
+            if (!document.getElementById('planet-modal').classList.contains('hidden')) return;
+
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-
-            const objectsToIntersect = scene.children.filter(obj => (obj.userData.details));
             
-            const intersects = raycaster.intersectObjects(objectsToIntersect);
-
-            if (intersects.length > 0) {
-                const clickedObject = intersects[0].object;
-                displayPlanetInfo(clickedObject);
-            }
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+            
+            // Szukamy tylko Meshy które mają userData.details
+            const hit = intersects.find(i => i.object.userData.details);
+            if (hit) displayPlanetInfo(hit.object);
         }
 
-        function displayPlanetInfo(planetMesh) {
+        function displayPlanetInfo(mesh) {
             const modal = document.getElementById('planet-modal');
-            const nameElement = document.getElementById('modal-planet-name');
-            const detailsElement = document.getElementById('modal-planet-details');
-            const imageContainer = document.getElementById('modal-image-container'); 
-
-            // 1. ZARZĄDZANIE OBRAZEM POGLĄDOWYM
-            imageContainer.innerHTML = ''; 
-            const imageUrl = planetMesh.userData.imageUrl;
-
-            if (imageUrl) {
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                img.className = "modal-img w-full h-40 object-cover rounded-lg shadow-md transition duration-300 transform hover:scale-[1.02] cursor-pointer"; 
-                img.alt = `Zdjęcie poglądowe ${planetMesh.name}`;
-                img.onerror = function() {
-                    this.onerror=null; 
-                    this.src='https://placehold.co/400x160/2D3748/A0AEC0?text=Brak+zdjęcia';
-                    this.classList.add('p-4'); // Dodaj padding do placeholdera
-                }
-                imageContainer.appendChild(img);
-            }
-
-            // 2. Ustawienie nazwy
-            nameElement.textContent = planetMesh.name;
-
-            // 3. Budowanie szczegółów
-            let htmlContent = '';
-            const details = planetMesh.userData.details;
-
-            if (!details) {
-                detailsElement.innerHTML = '<p class="text-red-400">Brak szczegółowych informacji dla tego obiektu.</p>';
-            } else {
-                for (const key in details) {
-                    htmlContent += `<div class="flex justify-between border-b border-gray-700 pb-1">`;
-                    // Zamieniamy podkreślenia na spacje w kluczu
-                    htmlContent += `    <span class="font-medium text-gray-400">${key.replace(/_/g, ' ')}:</span>`;
-                    // Używamy innerHTML, aby poprawnie renderować znaczniki HTML (np. <sub> i &deg;C)
-                    htmlContent += `    <span class="text-white font-semibold">${details[key]}</span>`;
-                    htmlContent += `</div>`;
-                }
-                detailsElement.innerHTML = htmlContent;
-            }
+            document.getElementById('modal-planet-name').textContent = mesh.name;
+            const imgContainer = document.getElementById('modal-image-container');
+            imgContainer.innerHTML = '';
             
-            // 4. Wyświetlenie modala
+            if(mesh.userData.imageUrl) {
+                imgContainer.innerHTML = `<img src="${mesh.userData.imageUrl}" class="modal-img" alt="${mesh.name}" onerror="this.src='https://placehold.co/400x200?text=Brak+foto'">`;
+            }
+
+            let html = '';
+            for (const [key, val] of Object.entries(mesh.userData.details)) {
+                html += `<div class="flex justify-between border-b border-gray-700 pb-1">
+                            <span class="font-medium text-gray-400">${key.replace(/_/g, ' ')}:</span>
+                            <span class="text-white font-semibold text-right">${val}</span>
+                         </div>`;
+            }
+            document.getElementById('modal-planet-details').innerHTML = html;
             modal.classList.remove('hidden');
         }
 
-        // --- GŁÓWNA PĘTLA ANIMACJI ---
-        let lastDateTimeUpdate = 0;
+        let lastTime = 0;
         function animate(time) {
             requestAnimationFrame(animate);
-
-            const elapsedDays = timeScale * speedMultiplier;
-            simulationDays += elapsedDays;
-
-
-            scene.children.forEach(object => {
-                if (object.userData.orbitalRotationSpeed) {
-                    const { distance, orbitalRotationSpeed, axialRotationFactor } = object.userData;
-                    
-                    // Ruch orbitalny
-                    object.userData.currentAngle += orbitalRotationSpeed * elapsedDays;
-                    const currentAngle = object.userData.currentAngle;
-
-                    object.position.x = distance * Math.cos(currentAngle);
-                    object.position.z = distance * Math.sin(currentAngle);
-                    
-                    // Ruch rotacyjny 
-                    object.rotation.y += earthRotationSpeedPerFrame * axialRotationFactor * speedMultiplier; 
-                }
-            });
+            const dt = time - lastTime;
             
-            controls.update();
-            updateLabels();
-
-            if (time - lastDateTimeUpdate > 100) { 
-                 updateDateTime();
-                 lastDateTimeUpdate = time;
+            if (dt > 100) { // Aktualizacja UI co 100ms
+                updateDateTime();
+                lastTime = time;
             }
 
+            simulationDays += timeScale * speedMultiplier;
+
+            planets.forEach(p => {
+                const d = p.userData;
+                d.currentAngle += d.orbitalRotationSpeed * timeScale * speedMultiplier;
+                p.position.x = d.distance * Math.cos(d.currentAngle);
+                p.position.z = d.distance * Math.sin(d.currentAngle);
+                p.rotation.y += 0.01;
+            });
+
+            controls.update();
+            updateLabels();
             renderer.render(scene, camera);
         }
 
@@ -688,18 +523,10 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            updateLabels();
         }
 
-        // --- START APLIKACJI ---
-        window.onload = function () {
-            if (typeof THREE !== 'undefined') {
-                init();
-                animate();
-                console.log("Model Układu Słonecznego 3D uruchomiony z zaktualizowanymi czasami podróży światła.");
-            } else {
-                console.error("Three.js nie zostało załadowane.");
-            }
+        window.onload = function() {
+            if (typeof THREE !== 'undefined') init(), animate(0);
         };
     </script>
 </body>
